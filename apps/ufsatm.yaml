@@ -1,0 +1,8 @@
+components:
+
+  FV3ATM:
+    git_repository: https://github.com/NOAA-EMC/fv3atm
+    git_tag: develop
+    source_dir: components/fv3atm
+    libraries: fv3atm
+    fort_module: fv3gfs_cap_mod

@@ -1,0 +1,9 @@
+components:
+
+  LIS:
+    git_repository: git@github.com:esmf-org/LISF.git
+    git_tag: feature/NUOPC
+    git_dir: components/LISF
+    source_dir: components/LISF/lis
+    fort_module: lis_nuopc.mod
+    libraries: lis_nuopc

@@ -1,0 +1,12 @@
+components:
+
+  WRFHYDRO:
+    git_repository: git@github.com:esmf-org/wrf_hydro_nwm_public.git
+    git_tag: feature/NUOPC
+    git_dir: components/wrfhydro
+    source_dir: components/wrfhydro/trunk/NDHMS
+    include_dir: WRFHYDRO/mods
+    fort_module: wrfhydro_nuopc.mod
+    libraries: wrfhydro_nuopc hydro_driver hydro_orchestrator hydro_routing hydro_utils hydro_mpp hydro_debug_utils hydro_routing_overland hydro_routing_subsurface hydro_data_rec hydro_routing_reservoirs_levelpool hydro_routing_reservoirs_hybrid hydro_routing_reservoirs_rfc hydro_routing_reservoirs hydro_netcdf_layer
+    build_args: -DWRF_HYDRO=1 -DWRF_HYDRO_NUOPC=1
+    test_dir: components/wrfhydro/tests/esmx

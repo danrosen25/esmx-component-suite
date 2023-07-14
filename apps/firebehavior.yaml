@@ -1,0 +1,10 @@
+components:
+
+  fire_behavior_nuopc:
+    git_repository: git@github.com:esmf-org/fire_behavior.git
+    git_tag: esmf-dev
+    source_dir: components/fire_behavior
+    cmake_config: fire_behavior_nuopc.cmake
+    fort_module:  fire_behavior_nuopc.mod
+    test_dir: components/fire_behavior/tests/esmx/xdata-fire
+

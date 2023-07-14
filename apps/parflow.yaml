@@ -1,0 +1,11 @@
+components:
+
+  ParFlow:
+    git_repository: git@github.com:esmf-org/parflow.git
+    git_tag: feature/NUOPC/ESMFAPP-6
+    source_dir: components/parflow
+    fort_module: parflow_nuopc.mod
+    libraries: parflow_nuopc
+    build_args: -DPARFLOW_ENABLE_NUOPC=ON -DPARFLOW_AMPS_LAYER=mpi1 -DPARFLOW_HAVE_CLM=ON -DPARFLOW_ENABLE_HYPRE=ON -DPARFLOW_ENABLE_SILO=ON -DPARFLOW_ENABLE_NETCDF=ON
+    test_dir: components/parflow/test/esmx
+    test_tasks: 1

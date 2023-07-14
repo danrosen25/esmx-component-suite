@@ -1,0 +1,6 @@
+components:
+  ParFlow: apps/parflow.yaml
+  fire_behavior_nuopc: apps/firebehavior.yaml
+  WRFHYDRO: apps/wrfhydro.yaml
+#  LIS: apps/lis.yaml
+#  FV3ATM: apps/ufsatm.yaml
