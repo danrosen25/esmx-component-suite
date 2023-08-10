@@ -22,11 +22,11 @@ jobs:
         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
         echo "${STACK_DIR}/bin" >> $GITHUB_PATH
     - name: Software Version
+      env:
+        ESMF_API_URL: https://api.github.com/repos/esmf-org/esmf/releases/latest
       run: |
         if [[ "$ESMF_VERSION" == 'release' ]]; then
-          ESMF_VERSION=${curl --silent "https://api.github.com/repos/esmf-org/esmf/releases/latest" | \
-            grep '"tag_name":' | \
-            sed -E 's/.*"([^"]+)".*/\1/'}
+          ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
           echo "ESMF_VERSION ${ESMF_VERSION}"
           echo "ESMF_VERSION=${ESMF_VERSION}" >> $GITHUB_ENV
         fi
