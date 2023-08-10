@@ -38,53 +38,54 @@ jobs:
         key: stack-${RUNNER_OS}-esmf@${ESMF_VERSION}
     - name: Install HDF5
       env:
+        HDF5_TMP: ${{ runner.temp }}/hdf5
+        HDF5_URL: https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.2/src/hdf5-1.12.2.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          mkdir hdf5
-          cd hdf5
-          curl -L ${{env.hdf5-url}} | tar --strip-components=2 -xz
+          mkdir ${HDF5_TMP}
+          cd ${HDF5_TMP}
+          curl -L ${HDF5_URL} | tar --strip-components=2 -xz
           ./configure --quiet --enable-silent-rules --enable-fortran --prefix=$STACK_DIR
           make all install
-          cd ..
         fi
         echo "HDF5_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install NetCDF-C
       env:
+        NETCDF_C_TMP: ${{ runner.temp }}/netcdf-c
+        NETCDF_C_URL: https://github.com/Unidata/netcdf-c/archive/v4.9.0.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          mkdir netcdf-c
-          cd netcdf-c
-          curl -L ${{env.netcdf-url}} | tar --strip-components=1 -xz
+          mkdir ${NETCDF_C_TMP}
+          cd ${NETCDF_C_TMP}
+          curl -L ${NETCDF_C_URL} | tar --strip-components=1 -xz
           CPPFLAGS=-I${STACK_DIR}/include LDFLAGS=-L${STACK_DIR}/lib ./configure --quiet --enable-silent-rules --prefix=$STACK_DIR
           make all install
-          cd ..
         fi
         echo "NETCDF_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install NetCDF-Fortran
       env:
+        NETCDF_FORTRAN_TMP: ${{ runner.temp }}/netcdf-c
+        NETCDF_FORTRAN_URL: https://github.com/Unidata/netcdf-fortran/archive/v4.5.4.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          mkdir netcdf-fortran
-          cd netcdf-fortran
-          curl -L ${{env.netcdff-url}} | tar --strip-components=1 -xz
+          mkdir ${NETCDF_FORTRAN_TMP}
+          cd ${NETCDF_FORTRAN_TMP}
+          curl -L ${NETCDF_FORTRAN_URL} | tar --strip-components=1 -xz
           CPPFLAGS=-I${STACK_DIR}/include LDFLAGS=-L${STACK_DIR}/lib ./configure --quiet --enable-silent-rules --prefix=${STACK_DIR}
           make all install
         fi
         echo "NETCDFF_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install ESMF
       env:
+        ESMF_TMP: ${{ runner.temp }}/esmf
+        ESMF_URL: https://github.com/esmf-org/esmf/archive/refs/tags/v${ESMF_VERSION}.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
         ESMF_COMM: "mpiuni"
-        ESMF_BOPT: "O"
-        ESMF_SITE: "default"
         ESMF_COMPILER: "gfortran"
-        ESMF_OS: "Linux"
-        ESMF_NETCDF: "split"
-        ESMF_NETCDF_LIBPATH: "${STACK_DIR}/lib"
-        ESMF_NETCDF_INCLUDE: "${STACK_DIR}/include"
+        ESMF_NETCDF: "nc-config"
         ESMF_NETCDF_LIBS: "-lnetcdf -lnetcdff"
         ESMF_INSTALL_MODDIR: "mod"
         ESMF_INSTALL_BINDIR: "bin"
@@ -92,14 +93,13 @@ jobs:
         ESMF_INSTALL_PREFIX: "${STACK_DIR}"
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
-          mkdir esmf
-          cd esmf
+          mkdir ${ESMF_TMP}
+          cd ${ESMF_TMP}
           export ESMF_DIR=`pwd`
-          curl -L https://github.com/esmf-org/esmf/archive/refs/tags/v${ESMF_VERSION}.tar.gz | \
-            tar --strip-components=1 -xz
+          curl -L ${ESMF_URL} | tar --strip-components=1 -xz
           make all install
-          cd ..
         fi
+        echo "ESMF_DIR=$STACK_DIR" >> $GITHUB_ENV
         echo "ESMFMKFILE=$STACK_DIR/lib/esmf.mk" >> $GITHUB_ENV
     - name: Build and Test
       run: |
