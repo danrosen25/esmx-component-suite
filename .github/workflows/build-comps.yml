@@ -21,21 +21,21 @@ jobs:
         echo "STACK_DIR=${STACK_DIR}" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
         echo "${STACK_DIR}/bin" >> $GITHUB_PATH
-    - name: Software Version
+    - name: Find ESMF Version
       env:
         ESMF_API_URL: https://api.github.com/repos/esmf-org/esmf/releases/latest
       run: |
         if [[ "$ESMF_VERSION" == 'latest' ]]; then
           ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/releases/latest
           ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
-          ESMF_URL=`curl --silent "${ESMF_API_URL}" | grep '"tarball_url":' | sed -E 's/.*"([^"]+)".*/\1/'`
+          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
         elif [[ "$ESMF_VERSION" == 'develop' ]]; then
           ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/commits/develop
           ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep -m1 '"sha":' | sed -E 's/.*"([^"]+)".*/\1/'
-          ESMF_URL=https://github.com/esmf-org/esmf/archive/${ESMF_VERSION}.tar.gz
+          ESMF_URL=https://api.github.com/repos/esmf-org/esmf/git/commits/${ESMF_VERSION}.tar.gz
           ESMF_VERSION=`echo ${ESMF_VERSION} | cut -c1-8`
         else
-          ESMF_URL=https://github.com/esmf-org/esmf/archive/${ESMF_VERSION}.tar.gz        
+          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
         fi
         echo "ESMF_URL=${ESMF_URL}" >> $GITHUB_ENV
         echo "ESMF_VERSION=${ESMF_VERSION}" >> $GITHUB_ENV
