@@ -4,58 +4,39 @@ on:
   push:
   pull_request:
 
-env:
-  ESMF_VERSION: 'develop'
-  STACK_DIR: ${{github.workspace}}/stack
-
 jobs:
   build_components:
     name: Build Components
     runs-on: ubuntu-22.04
 
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
     - name: Stack Directory Setup
       run: |
+        export STACK_DIR=${HOME}/stack
         mkdir -p ${STACK_DIR}/{include,lib,lib64,bin}
         export LD_LIBRARY_PATH=${STACK_DIR}/lib64:${STACK_DIR}/lib:${LD_LIBRARY_PATH}
         echo "STACK_DIR=${STACK_DIR}" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
         echo "${STACK_DIR}/bin" >> $GITHUB_PATH
-    - name: Find ESMF Version
-      env:
-        ESMF_API_URL: https://api.github.com/repos/esmf-org/esmf/releases/latest
-      run: |
-        if [[ "$ESMF_VERSION" == 'latest' ]]; then
-          ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/releases/latest
-          ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
-          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
-        elif [[ "$ESMF_VERSION" == 'develop' ]]; then
-          ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/commits/develop
-          ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep -m1 '"sha":' | sed -E 's/.*"([^"]+)".*/\1/'`
-          ESMF_URL=https://github.com/esmf-org/esmf/archive/${ESMF_VERSION}.tar.gz
-          ESMF_VERSION=`echo ${ESMF_VERSION} | cut -c1-8`
-        else
-          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
-        fi
-        echo "ESMF_URL=${ESMF_URL}" >> $GITHUB_ENV
-        echo "ESMF_VERSION=${ESMF_VERSION}" >> $GITHUB_ENV
     - name: Cache Dependencies
-      id: cache-libraries
-      uses: actions/cache@v3
+      id: cache-libraries-restore
+      uses: actions/cache/restore@v3
       with:
-        path: ${STACK_DIR}
-        key: stack-${{runner.os}}-${{runner.arch}}-esmf@${{env.ESMF_VERSION}}
+        path: ${{env.STACK_DIR}}
+        key: stack-${{runner.os}}-${{runner.arch}}
     - name: Install HDF5
       env:
         HDF5_TMP: ${{runner.temp}}/hdf5
         HDF5_URL: https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.2/src/hdf5-1.12.2.tar.gz
-        CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
+        CACHE_HIT: ${{steps.cache-libraries-restore.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
           mkdir ${HDF5_TMP}
           cd ${HDF5_TMP}
           curl -L ${{env.HDF5_URL}} | tar --strip-components=2 -xz
-          ./configure --quiet --enable-silent-rules --enable-fortran --prefix=$STACK_DIR
+          ./configure --quiet --enable-silent-rules --enable-fortran --prefix=${STACK_DIR}
           make all install
         fi
         echo "HDF5_DIR=$STACK_DIR" >> $GITHUB_ENV
@@ -63,13 +44,13 @@ jobs:
       env:
         NETCDF_C_TMP: ${{runner.temp}}/netcdf-c
         NETCDF_C_URL: https://github.com/Unidata/netcdf-c/archive/v4.9.0.tar.gz
-        CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
+        CACHE_HIT: ${{steps.cache-libraries-restore.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
           mkdir ${NETCDF_C_TMP}
           cd ${NETCDF_C_TMP}
           curl -L ${{env.NETCDF_C_URL}} | tar --strip-components=1 -xz
-          CPPFLAGS=-I${STACK_DIR}/include LDFLAGS=-L${STACK_DIR}/lib ./configure --quiet --enable-silent-rules --prefix=$STACK_DIR
+          CPPFLAGS=-I${STACK_DIR}/include LDFLAGS=-L${STACK_DIR}/lib ./configure --quiet --enable-silent-rules --prefix=${STACK_DIR}
           make all install
         fi
         echo "NETCDF_DIR=$STACK_DIR" >> $GITHUB_ENV
@@ -77,7 +58,7 @@ jobs:
       env:
         NETCDF_FORTRAN_TMP: ${{runner.temp}}/netcdf-fortran
         NETCDF_FORTRAN_URL: https://github.com/Unidata/netcdf-fortran/archive/v4.5.4.tar.gz
-        CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
+        CACHE_HIT: ${{steps.cache-libraries-restore.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" != 'true' ]]; then
           mkdir ${NETCDF_FORTRAN_TMP}
@@ -87,28 +68,16 @@ jobs:
           make all install
         fi
         echo "NETCDFF_DIR=$STACK_DIR" >> $GITHUB_ENV
+    - name: Cache Dependencies
+      id: cache-libraries-save
+      uses: actions/cache/save@v3
+      with:
+        path: ${{env.STACK_DIR}}
+        key: ${{steps.cache-libraries-restore.outputs.cache-primary-key}}
     - name: Install ESMF
-      env:
-        ESMF_TMP: ${{runner.temp}}/esmf
-        CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
-        ESMF_COMM: "mpiuni"
-        ESMF_COMPILER: "gfortran"
-        ESMF_NETCDF: "nc-config"
-        ESMF_NETCDF_LIBS: "-lnetcdf -lnetcdff"
-        ESMF_INSTALL_MODDIR: "mod"
-        ESMF_INSTALL_BINDIR: "bin"
-        ESMF_INSTALL_LIBDIR: "lib"
-        ESMF_INSTALL_PREFIX: "${STACK_DIR}"
-      run: |
-        if [[ "$CACHE_HIT" != 'true' ]]; then
-          mkdir ${ESMF_TMP}
-          cd ${ESMF_TMP}
-          export ESMF_DIR=`pwd`
-          curl -L ${{env.ESMF_URL}} | tar --strip-components=1 -xz
-          make all install
-        fi
-        echo "ESMF_DIR=$STACK_DIR" >> $GITHUB_ENV
-        echo "ESMFMKFILE=$STACK_DIR/lib/esmf.mk" >> $GITHUB_ENV
+      uses: ./.github/actions/install-esmf
+      with:
+        version: latest
     - name: Build and Test
       run: |
-        ESMX_Builder --test
+        echo ${ESMFMKFILE}

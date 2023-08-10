@@ -1,0 +1,88 @@
+name: 'Install ESMF'
+description: 'Install/Cache ESMF on Runner'
+inputs:
+  version:
+    description: 'Version'
+    required: false
+    default: 'latest'
+  compiler:
+    description: 'Compiler'
+    required: false
+    default: 'gfortran'
+  comm:
+    description: 'Communicator'
+    required: false
+    default: 'mpiuni'
+  netcdf:
+    description: 'NetCDF'
+    required: false
+    default: 'nc-config'
+
+runs:
+  using: "composite"
+  steps:
+    - id: version-esmf
+      shell: bash
+      run: |
+        if [[ "${{inputs.version}}" == 'latest' ]]; then
+          ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/releases/latest
+          ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
+          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
+        elif [[ "${{inputs.version}}" == 'develop' ]]; then
+          ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/commits/develop
+          ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep -m1 '"sha":' | sed -E 's/.*"([^"]+)".*/\1/'`
+          ESMF_URL=https://github.com/esmf-org/esmf/archive/${ESMF_VERSION}.tar.gz
+          ESMF_VERSION=`echo ${ESMF_VERSION} | cut -c1-8`
+        else
+          ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
+        fi
+        echo "ESMF_URL=${ESMF_URL}" >> ${GITHUB_ENV}
+        echo "ESMF_VERSION=${ESMF_VERSION}" >> ${GITHUB_ENV}
+        echo "ESMF_ROOT=${HOME}/esmf-${ESMF_VERSION}" >> ${GITHUB_ENV}
+    - id: build-info-esmf
+      shell: bash
+      env:
+        ESMF_DIR: ${{runner.temp}}/esmf
+        ESMF_COMM: ${{inputs.comm}}
+        ESMF_COMPILER: ${{inputs.compiler}}
+        ESMF_NETCDF: ${{inputs.netcdf}}
+        ESMF_INSTALL_MODDIR: "mod"
+        ESMF_INSTALL_BINDIR: "bin"
+        ESMF_INSTALL_LIBDIR: "lib"
+        ESMF_INSTALL_PREFIX: "${ESMF_ROOT}"
+      run: |
+        mkdir -p ${ESMF_DIR}
+        cd ${ESMF_DIR}
+        curl -L ${{env.ESMF_URL}} | tar --strip-components=1 -xz
+        make info > esmf.info
+        ESMF_HASH=${{hashFiles('esmf.info')}}
+        echo "ESMF_HASH=${ESMF_HASH}" >> $GITHUB_ENV
+    - id: cache-restore-esmf
+      uses: actions/cache/restore@v3
+      with:
+        path: ${{env.ESMF_ROOT}}
+        key: esmf@${{env.ESMF_VERSION}}-${{runner.os}}-${{env.ESMF_HASH}}
+    - id: install-esmf
+      if: ${{ steps.cache-esmf-restore.outputs.cache-hit != 'true' }}
+      shell: bash
+      env:
+        ESMF_DIR: ${{runner.temp}}/esmf
+        ESMF_COMM: ${{inputs.comm}}
+        ESMF_COMPILER: ${{inputs.compiler}}
+        ESMF_NETCDF: ${{inputs.netcdf}}
+        ESMF_INSTALL_MODDIR: "mod"
+        ESMF_INSTALL_BINDIR: "bin"
+        ESMF_INSTALL_LIBDIR: "lib"
+        ESMF_INSTALL_PREFIX: "${ESMF_ROOT}"
+      run: |
+        cd ${ESMF_DIR}
+        make all install
+        export LD_LIBRARY_PATH=${ESMF_ROOT}/lib:${LD_LIBRARY_PATH}
+        echo "ESMFMKFILE=${ESMF_ROOT}/lib/esmf.mk" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
+        echo "${ESMF_ROOT}/bin" >> $GITHUB_PATH
+    - id: cache-save-esmf
+      uses: actions/cache/save@v3
+      with:
+        path: ${{env.ESMF_ROOT}}
+        key: ${{steps.cache-restore-esmf.outputs.cache-primary-key}}
