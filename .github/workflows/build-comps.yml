@@ -6,7 +6,7 @@ on:
 
 env:
   ESMF_VERSION: 'release'
-  STACK_DIR: ${{env.GITHUB_WORKSPACE}}/stack
+  STACK_DIR: ${{GITHUB_WORKSPACE}}/stack
 
 jobs:
   build_components:
@@ -35,10 +35,10 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${STACK_DIR}
-        key: stack-${{env.RUNNER}}-esmf@${{env.ESMF_VERSION}}
+        key: stack-${{RUNNER}}-esmf@${{env.ESMF_VERSION}}
     - name: Install HDF5
       env:
-        HDF5_TMP: ${{env.RUNNER_TEMP}}/hdf5
+        HDF5_TMP: ${{RUNNER_TEMP}}/hdf5
         HDF5_URL: https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.2/src/hdf5-1.12.2.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
@@ -52,7 +52,7 @@ jobs:
         echo "HDF5_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install NetCDF-C
       env:
-        NETCDF_C_TMP: ${{env.RUNNER_TEMP}}/netcdf-c
+        NETCDF_C_TMP: ${{RUNNER_TEMP}}/netcdf-c
         NETCDF_C_URL: https://github.com/Unidata/netcdf-c/archive/v4.9.0.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
@@ -66,7 +66,7 @@ jobs:
         echo "NETCDF_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install NetCDF-Fortran
       env:
-        NETCDF_FORTRAN_TMP: ${{env.RUNNER_TEMP}}/netcdf-c
+        NETCDF_FORTRAN_TMP: ${{RUNNER_TEMP}}/netcdf-c
         NETCDF_FORTRAN_URL: https://github.com/Unidata/netcdf-fortran/archive/v4.5.4.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
       run: |
@@ -80,7 +80,7 @@ jobs:
         echo "NETCDFF_DIR=$STACK_DIR" >> $GITHUB_ENV
     - name: Install ESMF
       env:
-        ESMF_TMP: ${{env.RUNNER_TEMP}}/esmf
+        ESMF_TMP: ${{RUNNER_TEMP}}/esmf
         ESMF_URL: https://github.com/esmf-org/esmf/archive/refs/tags/v${ESMF_VERSION}.tar.gz
         CACHE_HIT: ${{steps.cache-build-dependencies.outputs.cache-hit}}
         ESMF_COMM: "mpiuni"
