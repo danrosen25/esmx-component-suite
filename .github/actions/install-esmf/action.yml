@@ -28,6 +28,7 @@ runs:
           ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/releases/latest
           ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'`
           ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
+          ESMF_VERSION=`echo ${ESMF_VERSION} | sed 's/^v//g'`
         elif [[ "${{inputs.version}}" == 'develop' ]]; then
           ESMF_API_URL=https://api.github.com/repos/esmf-org/esmf/commits/develop
           ESMF_VERSION=`curl --silent "${ESMF_API_URL}" | grep -m1 '"sha":' | sed -E 's/.*"([^"]+)".*/\1/'`
@@ -35,21 +36,15 @@ runs:
           ESMF_VERSION=`echo ${ESMF_VERSION} | cut -c1-8`
         else
           ESMF_URL=https://github.com/esmf-org/esmf/archive/refs/tags/${ESMF_VERSION}.tar.gz
+          ESMF_VERSION=`echo ${ESMF_VERSION} | sed 's/^v//g'`
         fi
         echo "esmf-url=${ESMF_URL}" >> ${GITHUB_OUTPUT}
         echo "ESMF_VERSION=${ESMF_VERSION}" >> ${GITHUB_ENV}
         echo "ESMF_ROOT=${HOME}/esmf-${ESMF_VERSION}" >> ${GITHUB_ENV}
-    - id: cache-restore-esmf
-      uses: actions/cache/restore@v3
-      with:
-        path: ${{env.ESMF_ROOT}}
-        key: esmf@${{env.ESMF_VERSION}}-${{runner.os}}.${{inputs.compiler}}.${{runner.arch}}.${{inputs.comm}}
-    - id: install-esmf
-      if: ${{ steps.cache-restore-esmf.outputs.cache-hit != 'true' }}
+    - id: download-esmf
       shell: bash
       env:
         ESMF_DIR: ${{runner.temp}}/esmf
-        ESMF_URL: ${{steps.version-esmf.outputs.esmf-url}}
         ESMF_COMM: ${{inputs.comm}}
         ESMF_COMPILER: ${{inputs.compiler}}
         ESMF_NETCDF: ${{inputs.netcdf}}
@@ -60,7 +55,28 @@ runs:
       run: |
         mkdir -p ${ESMF_DIR}
         cd ${ESMF_DIR}
-        curl --silent -L ${ESMF_URL} | tar --strip-components=1 -xz
+        curl --silent -L ${{steps.version-esmf.outputs.esmf-url}} | tar --strip-components=1 -xz
+        make info | sed '/Compiling on /d' > ${{github.workspace}}/.esmf.info
+    - id: cache-restore-esmf
+      uses: actions/cache/restore@v3
+      with:
+        path: ${{env.ESMF_ROOT}}
+        key: esmf@${{env.ESMF_VERSION}}-${{hashFiles('.esmf.info')}}"
+    - id: install-esmf
+      if: ${{steps.cache-restore-esmf.outputs.cache-hit != 'true'}}
+      shell: bash
+      env:
+        ESMF_DIR: ${{runner.temp}}/esmf
+        ESMF_COMM: ${{inputs.comm}}
+        ESMF_COMPILER: ${{inputs.compiler}}
+        ESMF_NETCDF: ${{inputs.netcdf}}
+        ESMF_INSTALL_MODDIR: "mod"
+        ESMF_INSTALL_BINDIR: "bin"
+        ESMF_INSTALL_LIBDIR: "lib"
+        ESMF_INSTALL_PREFIX: "${{env.ESMF_ROOT}}"
+      run: |
+        rm -f ${{github.workspace}}/.esmf.info
+        cd ${ESMF_DIR}
         make all install
     - id: environment-esmf
       shell: bash

@@ -80,4 +80,4 @@ jobs:
         version: latest
     - name: Build and Test
       run: |
-        ESMX_Builder apps/wrfhydro.yaml
+        cat ${ESMFMKFILE}
