@@ -62,10 +62,13 @@ runs:
         cd ${ESMF_DIR}
         curl --silent -L ${ESMF_URL} | tar --strip-components=1 -xz
         make all install
-        export LD_LIBRARY_PATH=${ESMF_INSTALL_PREFIX}/lib:${LD_LIBRARY_PATH}
-        echo "ESMFMKFILE=${ESMF_INSTALL_PREFIX}/lib/esmf.mk" >> $GITHUB_ENV
+    - id: environment-esmf
+      shell: bash
+      run: |
+        echo "ESMFMKFILE=${{env.ESMF_ROOT}}/lib/esmf.mk" >> $GITHUB_ENV
+        LD_LIBRARY_PATH=${{env.ESMF_ROOT}}/lib:${LD_LIBRARY_PATH}
         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
-        echo "${ESMF_INSTALL_PREFIX}/bin" >> $GITHUB_PATH
+        echo "${{env.ESMF_ROOT}}/bin" >> $GITHUB_PATH
     - id: cache-save-esmf
       uses: actions/cache/save@v3
       with:
