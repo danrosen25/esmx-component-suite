@@ -53,13 +53,13 @@ runs:
       run: |
         mkdir -p ${ESMF_DIR}
         cd ${ESMF_DIR}
-        curl -L ${{env.ESMF_URL}} | tar --strip-components=1 -xz
+        curl --silent -L ${{env.ESMF_URL}} | tar --strip-components=1 -xz
         make info > ${{github.workspace}}/esmf-build.info
     - id: cache-restore-esmf
       uses: actions/cache/restore@v3
       with:
         path: ${{env.ESMF_ROOT}}
-        key: esmf@${{env.ESMF_VERSION}}-${{runner.os}}-${{hashFiles('esmf-build.info')}}
+        key: esmf@${{env.ESMF_VERSION}}-${{hashFiles('esmf-build.info')}}
     - id: install-esmf
       if: ${{ steps.cache-restore-esmf.outputs.cache-hit != 'true' }}
       shell: bash
