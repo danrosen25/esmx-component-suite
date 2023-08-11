@@ -81,3 +81,4 @@ jobs:
     - name: Build and Test
       run: |
         cat ${ESMFMKFILE}
+        ESMX_Builder --help

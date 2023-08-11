@@ -17,6 +17,10 @@ inputs:
     description: 'NetCDF'
     required: false
     default: 'nc-config'
+  cache:
+    description: 'Caching'
+    required: false
+    default: true
 
 runs:
   using: "composite"
@@ -56,14 +60,15 @@ runs:
         mkdir -p ${ESMF_DIR}
         cd ${ESMF_DIR}
         curl --silent -L ${{steps.version-esmf.outputs.esmf-url}} | tar --strip-components=1 -xz
-        make info | sed '/Compiling on /d' > ${{github.workspace}}/.esmf.info
-    - id: cache-restore-esmf
-      uses: actions/cache/restore@v3
+        make info | sed -E '/Compiling on|Machine characteristics/d' > ${{github.workspace}}/.esmf.info
+    - id: cache-esmf
+      if: ${{inputs.cache}}
+      uses: actions/cache@v3
       with:
         path: ${{env.ESMF_ROOT}}
-        key: esmf@${{env.ESMF_VERSION}}-${{hashFiles('.esmf.info')}}"
+        key: esmf@${{env.ESMF_VERSION}}-${{hashFiles('.esmf.info')}}
     - id: install-esmf
-      if: ${{steps.cache-restore-esmf.outputs.cache-hit != 'true'}}
+      if: ${{steps.cache-esmf.outputs.cache-hit != 'true'}}
       shell: bash
       env:
         ESMF_DIR: ${{runner.temp}}/esmf
@@ -85,8 +90,3 @@ runs:
         LD_LIBRARY_PATH=${{env.ESMF_ROOT}}/lib:${LD_LIBRARY_PATH}
         echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> $GITHUB_ENV
         echo "${{env.ESMF_ROOT}}/bin" >> $GITHUB_PATH
-    - id: cache-save-esmf
-      uses: actions/cache/save@v3
-      with:
-        path: ${{env.ESMF_ROOT}}
-        key: ${{steps.cache-restore-esmf.outputs.cache-primary-key}}
