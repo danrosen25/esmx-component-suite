@@ -80,4 +80,4 @@ jobs:
         version: latest
     - name: Build and Test
       run: |
-        echo ${ESMFMKFILE}
+        ESMX_Builder apps/firebehavior.yaml
